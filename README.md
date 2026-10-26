@@ -105,6 +105,8 @@ PowerShell: set `$env:TEST_DATABASE_URL='postgres://settlement:settlement-local@
 
 Tests cover finalized-only ingestion, duplicate/overlapping delivery, provider outage and lag, range limits, malformed evidence, exact uint256 values, durable rollback, process crash, concurrent workers, new-scope backfill, API validation, and persisted finality-conflict halts.
 
+An optional real-chain smoke test reads one finalized Base block, derives a watched address from an actual USDC transfer, runs the real scanner, and verifies the persisted event. It submits no transactions. With `TEST_DATABASE_URL` set, export `LIVE_BASE_RPC_URL` to a Base mainnet endpoint and run `go test -run TestLiveBaseReadOnly -v ./internal/indexer`. This network-dependent test stays out of the deterministic CI suite.
+
 ## Design
 
 ```mermaid
@@ -119,7 +121,7 @@ flowchart LR
     F --> I[Read-only evidence API]
 ```
 
-See [architecture](docs/architecture.md), [correctness](docs/correctness.md), [runbook](docs/runbook.md), and [demo procedure](docs/demo.md).
+See [architecture](docs/architecture.md), [correctness](docs/correctness.md), [runbook](docs/runbook.md), [demo procedure](docs/demo.md), and [recorded validation](docs/validation.md).
 
 ## Outbox
 
