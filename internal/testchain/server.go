@@ -36,6 +36,7 @@ type Server struct {
 	ConflictHeight int64
 	RangeLimit     int64
 	NullFinal      bool
+	FinalHash      string
 }
 
 func New() *Server {
@@ -67,6 +68,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			n, _ = strconv.ParseInt(strings.TrimPrefix(tag, "0x"), 16, 64)
 		}
 		h := Header(n)
+		if tag == "finalized" && s.FinalHash != "" {
+			h.Hash = s.FinalHash
+		}
 		if n == s.ConflictHeight {
 			h.Hash = Hash(n + 900)
 		}

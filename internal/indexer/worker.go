@@ -155,6 +155,9 @@ func (w *Worker) fetch(ctx context.Context, rpc *RPC, cp Checkpoint) (*Batch, er
 		return nil, fmt.Errorf("%w: checkpoint %d expected %s got %s", ErrConflict, cp.Height, cp.Hash, previous.Hash)
 	}
 	if fn == cp.Height {
+		if !strings.EqualFold(previous.Hash, final.Hash) {
+			return nil, fmt.Errorf("%w: finalized tag disagrees with checkpoint header", ErrConflict)
+		}
 		return nil, nil
 	}
 	from := cp.Height - c.Replay + 1

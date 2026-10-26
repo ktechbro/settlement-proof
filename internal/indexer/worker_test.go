@@ -127,6 +127,28 @@ func TestFinalizedConflictHaltsBeforeFallback(t *testing.T) {
 	}
 }
 
+func TestFinalizedTagDisagreementAtCaughtUpCheckpointHalts(t *testing.T) {
+	fixture := testchain.New()
+	s := httptest.NewServer(fixture)
+	defer s.Close()
+	m := &memory{}
+	w := indexer.NewWorker(config(s.URL), m)
+	for i := 0; i < 3; i++ {
+		if _, err := w.Step(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	fixture.Mu.Lock()
+	fixture.FinalHash = testchain.Hash(999)
+	fixture.Mu.Unlock()
+	if _, err := w.Step(context.Background()); !errors.Is(err, indexer.ErrConflict) {
+		t.Fatalf("expected finality disagreement: %v", err)
+	}
+	if !m.halted {
+		t.Fatal("caught-up scope did not halt")
+	}
+}
+
 func TestRangeLimitShrinksForwardWindow(t *testing.T) {
 	fixture := testchain.New()
 	fixture.RangeLimit = 2
