@@ -79,7 +79,11 @@ func Handler(s *Store, w *Worker) http.Handler {
 			fail(rw)
 			return
 		}
-		write(rw, 200, map[string]any{"chain": s.Chain, "scope": s.Scope, "checkpoint": cp, "last_provider_finalized_height": w.Finalized.Load(), "finality_policy": "rpc-finalized-v1"})
+		protocol := w.Config.Protocol
+		if protocol == "" {
+			protocol = "evm"
+		}
+		write(rw, 200, map[string]any{"chain": s.Chain, "scope": s.Scope, "checkpoint": cp, "last_provider_finalized_height": w.Finalized.Load(), "finality_policy": w.Config.FinalityPolicy(), "protocol": protocol})
 	})
 	mux.HandleFunc("GET /v1/chains/{chain}/coverage", func(rw http.ResponseWriter, r *http.Request) {
 		if r.PathValue("chain") != s.Chain {
@@ -121,7 +125,7 @@ func Handler(s *Store, w *Worker) http.Handler {
 			return
 		}
 		rw.Header().Set("Content-Type", "text/html; charset=utf-8")
-		fmt.Fprint(rw, `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Settlement Proof</title><style>body{font:16px system-ui;background:#10151d;color:#dce7f5;max-width:950px;margin:60px auto;padding:20px}a{color:#66d9b0}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#19232f;padding:20px;border-radius:12px}h1{letter-spacing:-1px}</style><h1>Settlement Proof</h1><p>Finalized USDC transfer evidence · Base · exact amounts · durable checkpoints</p><p><a href="/v1/settlements">Settlements</a> · <a href="/health/ready">Readiness</a> · <a href="/metrics">Metrics</a></p><p>This observer covers its configured token and watched addresses. Records appear after the RPC finalized head permits them.</p><pre id="data">Loading evidence…</pre><script>fetch('/v1/settlements?limit=10').then(r=>r.json()).then(x=>document.getElementById('data').textContent=JSON.stringify(x,null,2)).catch(()=>document.getElementById('data').textContent='Unable to load evidence');</script></html>`)
+		fmt.Fprint(rw, evidencePage)
 	})
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		rw.Header().Set("X-Content-Type-Options", "nosniff")
@@ -132,6 +136,8 @@ func Handler(s *Store, w *Worker) http.Handler {
 		mux.ServeHTTP(rw, r.WithContext(ctx))
 	})
 }
+
+const evidencePage = `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Settlement Proof</title><style>body{font:16px system-ui;background:#10151d;color:#dce7f5;max-width:950px;margin:60px auto;padding:20px}a{color:#66d9b0}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#19232f;padding:20px;border-radius:12px}h1{letter-spacing:-1px}</style><h1>Settlement Proof</h1><p>Finalized transfer evidence · Base and Solana · exact amounts · durable checkpoints</p><p><a href="/v1/settlements">Settlements</a> · <a href="/health/ready">Readiness</a> · <a href="/metrics">Metrics</a></p><p>This observer covers its configured token and registered addresses/accounts. Records appear after finality evidence permits them.</p><pre id="data">Loading evidence…</pre><script>fetch('/v1/settlements?limit=10').then(r=>r.json()).then(x=>document.getElementById('data').textContent=JSON.stringify(x,null,2)).catch(()=>document.getElementById('data').textContent='Unable to load evidence');</script></html>`
 
 func parseFilter(r *http.Request) (Filter, error) {
 	f := Filter{To: math.MaxInt64, Limit: 100}

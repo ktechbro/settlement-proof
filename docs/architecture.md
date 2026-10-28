@@ -22,11 +22,13 @@ The RPC client uses bounded HTTP requests, rejects null/malformed/mismatched env
 
 ## Persistence
 
-The embedded `schema.sql` is the initial schema, applied transactionally under a PostgreSQL advisory lock. It uses idempotent creation for concurrent startup. Future schema changes should add numbered migrations; do not silently alter this initial schema in a deployed database.
+The embedded `schema.sql` is the initial schema, applied transactionally under a PostgreSQL advisory lock. Numbered SQL migrations run under the same lock and track checksums, preserving existing EVM rows and scope hashes. Future changes require another numbered migration; do not edit an applied migration or silently alter the baseline.
 
 Raw observations retain provider provenance and a decoder version. The key includes scope, block hash, transaction hash, log index, and provider. Because this implementation reads finalized history only, it does not maintain a provisional fork store.
 
 Settlement uniqueness is `(chain, transaction_hash, log_index)`. A repeated identity is accepted only if all persisted economic fields agree. Competing block evidence or changed settlement content raises a finalized-history conflict. An outbox row has a unique settlement ID; overlapping watch scopes cannot generate additional financial effects.
+
+The Solana adapter shares this financial commit helper but has a protocol-specific finalized block scanner and `solana_blocks` header table. Its legacy numeric locator packs outer/inner instruction indices; the API also exposes the original indices and token-account addresses. It verifies produced-block parent slots across skipped gaps, resumes from a produced-block checkpoint, and records produced/skipped counts. See [the Solana design](solana.md).
 
 `NUMERIC(78,0)` holds a uint256 quantity exactly, with a database check enforcing its range. API serialization returns the amount as a decimal string. Display decimals are intentionally a client concern; the observer never makes accounting conversions.
 

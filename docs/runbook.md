@@ -1,5 +1,7 @@
 # Operator runbook
 
+For Solana, use the [protocol-specific configuration and recovery guide](solana.md). The existing checkpoint/coverage fields are slot numbers, and watch targets are token accounts. Missing historical ownership, truncated logs, failed caught token CPIs, or unsupported instructions are visible coverage blockers; investigate the source/decoder rather than advancing past them.
+
 ## Inspect progress
 
 Check `/health/ready`, `/v1/chains/{chain}/status`, `/v1/chains/{chain}/coverage`, and `/metrics`. The checkpoint is durable; provider failure/batch counters reset on process restart. `last_provider_finalized_height` is an observation, not a multi-provider consensus value.

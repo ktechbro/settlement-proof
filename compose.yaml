@@ -36,5 +36,14 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+  solana-demo:
+    build: .
+    profiles: [solana-demo]
+    entrypoint: [/app/solana-demo]
+    environment:
+      DATABASE_URL: postgres://settlement:settlement-local@postgres:5432/settlement?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
 volumes:
   postgres-data:

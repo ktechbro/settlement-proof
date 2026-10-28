@@ -1,6 +1,6 @@
 # Settlement Proof
 
-A Go/PostgreSQL service that turns finalized Base ERC-20 transfers into durable settlement evidence. Built by **[ktechbro](https://github.com/ktechbro)** as a blockchain infrastructure portfolio project.
+A Go/PostgreSQL service that turns finalized Base ERC-20 and Solana SPL Token transfers into durable settlement evidence. Built by **[ktechbro](https://github.com/ktechbro)** as a blockchain infrastructure portfolio project.
 
 It answers: **Which payments actually finalized, and can we recover from an RPC outage without missing or counting them twice?**
 
@@ -16,8 +16,22 @@ It answers: **Which payments actually finalized, and can we recover from an RPC 
 - REST evidence/coverage endpoints, a small evidence viewer, and Prometheus metrics.
 - A synthetic demo with primary-provider failure, duplicate RPC logs, multiple movements in one transaction, restart recovery, and exclusion of an unfinalized payment.
 - Unit and real-PostgreSQL integration tests, including abrupt process death during a transaction.
+- Solana block-history recovery, registered token-account coverage, direct/CPI transfers, legacy/v0/v1 transactions, and explicit skipped-slot evidence.
 
-**Scope:** this implements Project 1's Base finalized-only MVP. It does not ingest provisional blocks, Solana, escrow-specific events, or authorization decisions. It never signs transactions or holds wallet keys. It observes configured token transfers; it does not prove they were authorized. See [correctness and limitations](docs/correctness.md).
+**Scope:** Base uses registered sender/recipient addresses; Solana uses registered token accounts and the legacy SPL Token program. Both paths ingest finalized history only. Solana wallet discovery, Token-2022, escrow-specific lifecycle events, and authorization decisions are outside this observer. It never signs transactions or holds wallet keys. See [correctness and limitations](docs/correctness.md).
+
+## Solana quickstart
+
+Run a deterministic recovery demonstration using real PostgreSQL and synthetic Solana RPC providers:
+
+```sh
+cp .env.example .env
+docker compose --profile solana-demo run --build --rm solana-demo
+```
+
+PowerShell: `Copy-Item .env.example .env` if `.env` does not already exist. Preserve any existing live configuration. The demo verifies five transfer identities/amounts, direct and inner instructions, loaded addresses, long skipped-slot gaps, restart recovery, provider failure, and exactly five outbox effects. Its final JSON report must say `"status":"PASS"`.
+
+For live Solana, use [.env.solana.example](.env.solana.example), select `CHAIN_PROTOCOL=solana`, register USDC **token accounts**, and provide the full genesis hash plus an independently verified produced-block anchor. Then run the existing `indexer` executable or Compose live profile. Base58 identifiers remain case-sensitive. Full setup, supported instructions, event locators, and provider requirements: [Solana operations guide](docs/solana.md).
 
 ## Run the deterministic demo
 

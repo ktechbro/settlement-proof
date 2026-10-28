@@ -45,3 +45,21 @@ The opt-in `TestLiveBaseReadOnly` passed using the [PublicNode Base RPC](https:/
 The first attempt against `https://mainnet.base.org` returned HTTP 429. The subsequent PublicNode run succeeded. This validates compatibility with a live provider under the documented trust assumptions, not independent consensus verification. No transaction was submitted and no signing key was used.
 
 The live test is intentionally opt-in and is skipped by deterministic CI when `LIVE_BASE_RPC_URL` is absent.
+
+## Solana extension validation
+
+The Base regression suite and new Solana/PostgreSQL tests passed, including finalized backfill, provider failure, restart, missing history, long skipped-slot gaps, direct/CPI/compiled transfers, loaded addresses, v1 configuration, new-scope replay, rollback/fencing, and persisted halts. A separate isolated-schema test upgraded the original EVM schema and verified preservation of its settlement amount and checkpoint.
+
+The synthetic Solana demo returned PASS with five transfers, total `77000001` atomic units, five outbox effects, and checkpoint slot 109. It excludes a failed transaction and unsafe slot 110.
+
+The optional read-only Solana mainnet test also passed using PublicNode:
+
+| Field | Observed value |
+| --- | --- |
+| Slot | `462644894` |
+| Transaction | [`5WrNM3GwUhD6JgQ6MmmorUpxFbSzeJHuDyfqmhGGXW5Di2yt4JrRvAG9AsJ6BWM4pyBoYuznAHrJp4vvF9wDZpuY`](https://solscan.io/tx/5WrNM3GwUhD6JgQ6MmmorUpxFbSzeJHuDyfqmhGGXW5Di2yt4JrRvAG9AsJ6BWM4pyBoYuznAHrJp4vvF9wDZpuY) |
+| Instruction path | Outer `0`, inner `1` |
+| Atomic amount | `249984224` |
+| Registered token account | `SeR9og31Db3XQSjb4tUVVEhDT1ReEsXtWiQo4MQ5Bqg` |
+
+An initial request capped at transaction version 0 returned RPC error -32015 because the block contained version 1 transactions. The implementation was updated to request/support version 1 and preserve its transaction configuration; the subsequent live scan persisted and verified the actual transfer. No wallet or transaction submission was involved.

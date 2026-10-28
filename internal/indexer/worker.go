@@ -67,6 +67,9 @@ func (w *Worker) Run(ctx context.Context) error {
 }
 
 func (w *Worker) Step(ctx context.Context) (bool, error) {
+	if w.Config.Protocol == "solana" {
+		return w.stepSolana(ctx)
+	}
 	cp, err := w.Store.Checkpoint(ctx)
 	if err != nil {
 		return false, err

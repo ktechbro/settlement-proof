@@ -36,21 +36,26 @@ type Log struct {
 }
 
 type Settlement struct {
-	ID              int64           `json:"id"`
-	Chain           string          `json:"chain"`
-	Asset           string          `json:"asset"`
-	TransactionHash string          `json:"transaction_hash"`
-	LogIndex        int64           `json:"log_index"`
-	BlockNumber     int64           `json:"block_number"`
-	BlockHash       string          `json:"block_hash"`
-	BlockTime       int64           `json:"block_time"`
-	Sender          string          `json:"sender"`
-	Recipient       string          `json:"recipient"`
-	Amount          string          `json:"amount_atomic"`
-	Provider        string          `json:"provider"`
-	FinalizedNumber int64           `json:"finalized_number"`
-	FinalizedHash   string          `json:"finalized_hash"`
-	Raw             json.RawMessage `json:"raw_log"`
+	Protocol         string          `json:"protocol,omitempty"`
+	OuterInstruction *int            `json:"outer_instruction,omitempty"`
+	InnerInstruction *int            `json:"inner_instruction,omitempty"`
+	SenderAccount    string          `json:"sender_account,omitempty"`
+	RecipientAccount string          `json:"recipient_account,omitempty"`
+	ID               int64           `json:"id"`
+	Chain            string          `json:"chain"`
+	Asset            string          `json:"asset"`
+	TransactionHash  string          `json:"transaction_hash"`
+	LogIndex         int64           `json:"log_index"`
+	BlockNumber      int64           `json:"block_number"`
+	BlockHash        string          `json:"block_hash"`
+	BlockTime        int64           `json:"block_time"`
+	Sender           string          `json:"sender"`
+	Recipient        string          `json:"recipient"`
+	Amount           string          `json:"amount_atomic"`
+	Provider         string          `json:"provider"`
+	FinalizedNumber  int64           `json:"finalized_number"`
+	FinalizedHash    string          `json:"finalized_hash"`
+	Raw              json.RawMessage `json:"raw_log"`
 }
 
 type Checkpoint struct {
@@ -136,6 +141,11 @@ func decodeLog(l Log, h Header, cfg Config, provider string, final Header) (Sett
 func (c Config) Scope() string {
 	w := append([]string(nil), c.Watch...)
 	sort.Strings(w)
+	if c.Protocol == "solana" {
+		b, _ := json.Marshal([]any{"solana-finalized-blocks-v1", c.Chain, c.ChainID, c.Token, c.Decimals, c.Start, c.AnchorNumber, c.AnchorHash, w})
+		h := sha256.Sum256(b)
+		return hex.EncodeToString(h[:])
+	}
 	b, _ := json.Marshal([]any{"evm-finalized-v1", c.Chain, c.ChainID, c.Token, c.Start, c.AnchorNumber, c.AnchorHash, w})
 	h := sha256.Sum256(b)
 	return hex.EncodeToString(h[:])

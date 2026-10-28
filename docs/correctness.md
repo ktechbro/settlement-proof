@@ -21,7 +21,7 @@ The scanner queries a whole token contract's transfer logs for each bounded rang
 
 ## Deliberate exclusions
 
-- Solana is not implemented. A later adapter must handle commitment, token-account coverage, closed accounts, instruction paths, and historical transaction availability separately.
+- Solana coverage is limited to registered token accounts, classic SPL Token transfers, supported historical metadata, and legacy/v0/v1 transactions. Automatic wallet-account discovery and Token-2022 are excluded. See [Solana coverage and limits](solana.md).
 - No provisional subscriptions or reorg rollback are implemented. Unsafe blocks never enter this finalized-only pipeline. A finalized-history conflict requires operator investigation.
 - No authorization matching or escrow state reconstruction is implemented. These are projects 2 and 4 in the original plan.
 - No transaction submission, private-key custody, bridge processing, pricing, or financial bookkeeping.
@@ -39,4 +39,4 @@ An unexpected response is not treated as proof of no payments. Empty *successful
 
 ## Verification strategy
 
-Unit tests use an actual HTTP JSON-RPC fixture with an independent expected event set. Integration tests exercise PostgreSQL constraints, transactions, new scope backfill, API behavior, abrupt process exit, and concurrent commits. The demonstration has synthetic finality progression; it is not evidence of live Base or Solana performance.
+Unit tests use HTTP JSON-RPC fixtures with independent expected event sets. Integration tests exercise PostgreSQL constraints, transactions, new scope backfill, API behavior, abrupt process exit, concurrent commits, Solana history recovery, and legacy-schema migration. Demonstrations use synthetic finality; optional live tests verify actual transfers without claiming production throughput.
