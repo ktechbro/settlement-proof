@@ -16,21 +16,22 @@ type Provider struct {
 	URL  string `json:"url"`
 }
 type Config struct {
-	Protocol     string
-	Decimals     int
-	Chain        string
-	ChainID      string
-	Token        string
-	Watch        []string
-	Start        int64
-	AnchorNumber int64
-	AnchorHash   string
-	BatchSize    int64
-	Replay       int64
-	Providers    []Provider
-	DatabaseURL  string
-	Listen       string
-	Poll         time.Duration
+	EscrowPrograms []string
+	Protocol       string
+	Decimals       int
+	Chain          string
+	ChainID        string
+	Token          string
+	Watch          []string
+	Start          int64
+	AnchorNumber   int64
+	AnchorHash     string
+	BatchSize      int64
+	Replay         int64
+	Providers      []Provider
+	DatabaseURL    string
+	Listen         string
+	Poll           time.Duration
 }
 
 func LoadConfig() (Config, error) {
@@ -45,6 +46,11 @@ func LoadConfig() (Config, error) {
 		c.Replay = 0
 		c.BatchSize = 5
 		c.Decimals = 6
+	}
+	for _, p := range strings.Split(os.Getenv("ESCROW_PROGRAMS"), ",") {
+		if p = strings.TrimSpace(p); p != "" {
+			c.EscrowPrograms = append(c.EscrowPrograms, p)
+		}
 	}
 	if c.Listen == "" {
 		c.Listen = "127.0.0.1:8080"
@@ -111,8 +117,13 @@ func (c Config) Validate() error {
 	if c.Start < 1 || c.AnchorNumber < 0 || c.AnchorNumber >= c.Start || c.BatchSize < 1 || c.BatchSize > 10000 || c.Replay < 0 || c.Replay > 10000 || c.Poll < time.Millisecond {
 		return fmt.Errorf("invalid scan bounds, anchor, batch size, replay, or polling interval")
 	}
-	if len(c.Watch) == 0 || len(c.Providers) == 0 {
+	if (len(c.Watch) == 0 && len(c.EscrowPrograms) == 0) || len(c.Providers) == 0 {
 		return fmt.Errorf("at least one watch address and RPC provider required")
+	}
+	for _, p := range c.EscrowPrograms {
+		if c.Protocol != "solana" || !solana.Valid58(p, 32) {
+			return fmt.Errorf("escrow programs require Solana and valid program public keys")
+		}
 	}
 	for _, a := range c.Watch {
 		if (c.Protocol == "solana" && !solana.Valid58(a, 32)) || (c.Protocol != "solana" && !validHex(a, 20)) {

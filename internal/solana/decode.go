@@ -73,9 +73,10 @@ type Event struct {
 	Transaction                     json.RawMessage
 }
 type Decoder struct {
-	Mint     string
-	Decimals int
-	Accounts []string
+	EscrowPrograms []string
+	Mint           string
+	Decimals       int
+	Accounts       []string
 }
 
 func (d Decoder) Decode(block Block) ([]Event, error) {
@@ -91,6 +92,11 @@ func (d Decoder) Decode(block Block) ([]Event, error) {
 	watch := map[string]bool{}
 	for _, a := range d.Accounts {
 		watch[a] = true
+	}
+	programs := map[string]bool{}
+	for _, p := range d.EscrowPrograms {
+		programs[p] = true
+		watch[p] = true
 	}
 	for _, raw := range rawTransactions {
 		var tx Transaction
@@ -116,6 +122,21 @@ func (d Decoder) Decode(block Block) ([]Event, error) {
 		if !bytes.Equal(tx.Meta.Err, []byte("null")) {
 			continue
 		} // Failed transactions have no token effects.
+		for _, in := range tx.Transaction.Message.Instructions {
+			program, err := programID(in, keys)
+			if err != nil {
+				return nil, err
+			}
+			if programs[program] {
+				parsed, err := parseEscrow(in, keys, d.Mint)
+				if err != nil {
+					return nil, err
+				}
+				if !parsed.skip {
+					watch[parsed.event.Vault] = true
+				}
+			}
+		}
 		if len(tx.Transaction.Signatures) == 0 || !Valid58(tx.Transaction.Signatures[0], 64) {
 			return nil, fmt.Errorf("invalid transaction signature")
 		}

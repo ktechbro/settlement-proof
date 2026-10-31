@@ -3,7 +3,7 @@ WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 go build -trimpath -o /out/indexer ./cmd/indexer && CGO_ENABLED=0 go build -trimpath -o /out/demo ./cmd/demo && CGO_ENABLED=0 go build -trimpath -o /out/solana-demo ./cmd/solana-demo
+RUN CGO_ENABLED=0 go build -trimpath -o /out/indexer ./cmd/indexer && CGO_ENABLED=0 go build -trimpath -o /out/demo ./cmd/demo && CGO_ENABLED=0 go build -trimpath -o /out/solana-demo ./cmd/solana-demo && CGO_ENABLED=0 go build -trimpath -o /out/escrow-demo ./cmd/escrow-demo
 
 FROM alpine:3.23
 RUN apk add --no-cache ca-certificates && adduser -D -u 10001 observer

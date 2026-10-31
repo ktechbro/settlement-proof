@@ -45,5 +45,14 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+  escrow-demo:
+    build: .
+    profiles: [escrow-demo]
+    entrypoint: [/app/escrow-demo]
+    environment:
+      DATABASE_URL: postgres://settlement:settlement-local@postgres:5432/settlement?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
 volumes:
   postgres-data:

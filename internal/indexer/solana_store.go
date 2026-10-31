@@ -51,6 +51,9 @@ func (s *Store) CommitSolana(ctx context.Context, expected Checkpoint, b SolanaB
 	if err = s.insertSettlements(ctx, tx, b.Provider, b.Settlements); err != nil {
 		return err
 	}
+	if err = s.insertEscrowEvents(ctx, tx, b.EscrowEvents); err != nil {
+		return err
+	}
 	if _, err = tx.Exec(ctx, "INSERT INTO scan_ranges(scope,from_block,to_block,provider,finalized_number,finalized_hash,event_count,protocol,produced_blocks,skipped_slots) VALUES($1,$2,$3,$4,$5,$6,$7,'solana',$8,$9)", s.Scope, b.From, b.To, b.Provider, b.FinalizedSlot, b.FinalizedHash, len(b.Settlements), len(b.Blocks), b.To-b.From+1-int64(len(b.Blocks))); err != nil {
 		return err
 	}

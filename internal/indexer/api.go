@@ -3,7 +3,9 @@ package indexer
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/jackc/pgx/v5"
 	"math"
 	"net/http"
 	"strconv"
@@ -18,6 +20,35 @@ func Handler(s *Store, w *Worker) http.Handler {
 		_ = json.NewEncoder(rw).Encode(value)
 	}
 	fail := func(rw http.ResponseWriter) { write(rw, 503, map[string]string{"error": "database unavailable"}) }
+	mux.HandleFunc("GET /v1/escrow-events", func(rw http.ResponseWriter, r *http.Request) {
+		f, err := parseFilter(r)
+		if err != nil {
+			write(rw, 400, map[string]string{"error": err.Error()})
+			return
+		}
+		values, err := s.EscrowEvents(r.Context(), f.After, f.Limit)
+		if err != nil {
+			fail(rw)
+			return
+		}
+		next := f.After
+		if len(values) > 0 {
+			next = values[len(values)-1].Event.ID
+		}
+		write(rw, 200, map[string]any{"data": values, "next_cursor": strconv.FormatInt(next, 10), "scope": s.Scope})
+	})
+	mux.HandleFunc("GET /v1/escrows/{program}/{escrow}", func(rw http.ResponseWriter, r *http.Request) {
+		value, err := s.EscrowDetail(r.Context(), r.PathValue("program"), r.PathValue("escrow"))
+		if errors.Is(err, pgx.ErrNoRows) {
+			write(rw, 404, map[string]string{"error": "not found"})
+			return
+		}
+		if err != nil {
+			fail(rw)
+			return
+		}
+		write(rw, 200, value)
+	})
 	mux.HandleFunc("GET /health/live", func(rw http.ResponseWriter, r *http.Request) { write(rw, 200, map[string]string{"status": "alive"}) })
 	mux.HandleFunc("GET /health/ready", func(rw http.ResponseWriter, r *http.Request) {
 		cp, err := s.Checkpoint(r.Context())

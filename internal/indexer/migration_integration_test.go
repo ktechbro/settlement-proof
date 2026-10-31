@@ -74,7 +74,7 @@ func TestPostgresMigrationPreservesLegacyEVMRecords(t *testing.T) {
 	}
 	defer reopened.Pool.Close()
 	var count int
-	if err = reopened.Pool.QueryRow(ctx, "SELECT count(*) FROM schema_migrations").Scan(&count); err != nil || count != 1 {
+	if err = reopened.Pool.QueryRow(ctx, "SELECT count(*) FROM schema_migrations").Scan(&count); err != nil || count != 2 {
 		t.Fatal("migration was not applied once", err)
 	}
 }

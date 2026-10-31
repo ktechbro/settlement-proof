@@ -16,6 +16,7 @@ type SolanaHeader struct {
 	Block solana.Block
 }
 type SolanaBatch struct {
+	EscrowEvents            []solana.EscrowEvent
 	From, To, FinalizedSlot int64
 	FinalizedHash           string
 	Blocks                  []SolanaHeader
@@ -159,6 +160,20 @@ func (w *Worker) fetchSolana(ctx context.Context, rpc *RPC, cp Checkpoint) (*Sol
 	batch := &SolanaBatch{From: from, FinalizedSlot: root, FinalizedHash: final.Hash, Provider: rpc.Provider.Name}
 	parentSlot := cp.Height
 	parentHash := cp.Hash
+	accounts := append([]string(nil), c.Watch...)
+	if len(c.EscrowPrograms) > 0 {
+		source, ok := w.Store.(interface {
+			EscrowVaults(context.Context) ([]string, error)
+		})
+		if !ok {
+			return nil, fmt.Errorf("storage does not support escrow vault recovery")
+		}
+		vaults, err := source.EscrowVaults(ctx)
+		if err != nil {
+			return nil, err
+		}
+		accounts = append(accounts, vaults...)
+	}
 	for _, slot := range slots {
 		if slot <= parentSlot || slot > to {
 			return nil, fmt.Errorf("invalid produced-slot ordering")
@@ -173,9 +188,24 @@ func (w *Worker) fetchSolana(ctx context.Context, rpc *RPC, cp Checkpoint) (*Sol
 		if block.Time == nil || *block.Time < 0 {
 			return nil, fmt.Errorf("missing historical block time")
 		}
-		events, err := (solana.Decoder{Mint: c.Token, Decimals: c.Decimals, Accounts: c.Watch}).Decode(block)
+		events, err := (solana.Decoder{Mint: c.Token, Decimals: c.Decimals, Accounts: accounts, EscrowPrograms: c.EscrowPrograms}).Decode(block)
 		if err != nil {
 			return nil, err
+		}
+		escrowEvents, err := solana.DecodeEscrows(block, c.Token, c.EscrowPrograms, events)
+		if err != nil {
+			return nil, err
+		}
+		for _, e := range escrowEvents {
+			e.Chain = c.Chain
+			e.Slot = slot
+			e.BlockHash = block.Hash
+			e.BlockTime = *block.Time
+			e.FinalizedSlot = root
+			e.FinalizedHash = final.Hash
+			e.EventKey = e.Key()
+			batch.EscrowEvents = append(batch.EscrowEvents, e)
+			accounts = append(accounts, e.Vault)
 		}
 		for _, event := range events {
 			if event.Outer > math.MaxInt32 || int64(event.Inner) >= math.MaxUint32 {

@@ -142,6 +142,13 @@ func (c Config) Scope() string {
 	w := append([]string(nil), c.Watch...)
 	sort.Strings(w)
 	if c.Protocol == "solana" {
+		if len(c.EscrowPrograms) > 0 {
+			programs := append([]string(nil), c.EscrowPrograms...)
+			sort.Strings(programs)
+			b, _ := json.Marshal([]any{"solana-escrow-v1", c.Chain, c.ChainID, c.Token, c.Decimals, c.Start, c.AnchorNumber, c.AnchorHash, w, programs})
+			h := sha256.Sum256(b)
+			return hex.EncodeToString(h[:])
+		}
 		b, _ := json.Marshal([]any{"solana-finalized-blocks-v1", c.Chain, c.ChainID, c.Token, c.Decimals, c.Start, c.AnchorNumber, c.AnchorHash, w})
 		h := sha256.Sum256(b)
 		return hex.EncodeToString(h[:])

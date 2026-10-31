@@ -4,6 +4,8 @@ A Go/PostgreSQL service that turns finalized Base ERC-20 and Solana SPL Token tr
 
 It answers: **Which payments actually finalized, and can we recover from an RPC outage without missing or counting them twice?**
 
+Escrow funding, release, and refund indexing is available through an opt-in native Solana adapter. See [escrow configuration, APIs, and demo](docs/escrow.md).
+
 ## What works
 
 - Bounded historical backfill and continuous finalized-block polling.
